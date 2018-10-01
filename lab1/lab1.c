@@ -49,8 +49,16 @@ void matrixAdd(int Hight, int Width){
 //Matrix Addition threaded
 //
 void* matrixAddTh(void* id){
-
-        //TODO
+	int threadID=(int)id;
+	int i,j;
+	int num_rows_per_thread=HEIGHT/threads_count;
+	int start_row=threadID*num_rows_per_thread;
+	int stop_row=start_row+num_rows_per_thread;
+	for(i=start_row;i<stop_row;i++){
+		for(j=0;j<WIDTH;j++){
+			z[i][j]=x[i][j]+y[i][j];
+		}
+	}
         return NULL;
 }
 
@@ -92,15 +100,15 @@ int main(int argc, char *argv[] )
         {
             printf("Secs Serial = %10.3lf\n",ttime);
         }
-	/*
+	
         //threaded part of HW
         long thread;
         pthread_t* thread_handles;
         double tstartT, tstopT, ttimeT;
 
         //get number of threads for user input and allocate memory to them
-        //TODO
-
+        threads_count=strtol(argv[1], NULL, 10);
+	thread_handles=malloc(threads_count*sizeof(pthread_t));
         tstartT = dtime();
         for(thread=0; thread<threads_count; thread++)
                 pthread_create(&thread_handles[thread], NULL, matrixAddTh, (void*) thread);
@@ -113,7 +121,7 @@ int main(int argc, char *argv[] )
         {
             printf("Secs Threaded = %10.3lf\n", ttimeT);
         }
-
+	/*
         //check the solutions are the same in both implementations
         int row, col;
         float dif, accum=0;
@@ -125,8 +133,8 @@ int main(int argc, char *argv[] )
         }
         if(accum < 0.1) printf("SUCESS\n");
         else printf("FAIL\n");
-	
 	*/
+	
         return( 0 );
 }
 
