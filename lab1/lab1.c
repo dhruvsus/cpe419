@@ -27,7 +27,7 @@ int x[HEIGHT][WIDTH];
 int y[HEIGHT][WIDTH];
 
 // declare the output array
-int z[HEIGHT][WIDTH]
+int z[HEIGHT][WIDTH];
 
 /*global variable accesible to all threads*/
 long threads_count;
@@ -56,15 +56,19 @@ void* matrixAddTh(void* id){
 
 int main(int argc, char *argv[] )
 {
-        int i,j;         double tstart, tstop, ttime;
-
+        int i,j;
+	double tstart, tstop, ttime;
+	srand(time(NULL));
         //
         // initialize the input arrays 
         //
         printf("Initializing\r\n");
-        for(i=0; i<ARRAY_SIZE; i++)
+	for(i=0; i<ARRAY_SIZE; i++)
         {
-            //TODO
+            int rloc=i/WIDTH;
+	    int cloc=i%WIDTH;
+	    x[rloc][cloc]=rand();
+	    y[rloc][cloc]=rand();
         }
 
         printf("Starting Compute\r\n");
@@ -73,8 +77,8 @@ int main(int argc, char *argv[] )
         // loop many times to really get lots of calculations
         for(j=0; j<1000; j++)
         {
-                // multiply the two arrays 
-                matrixAdd(HIGHT,WIDTH);
+                // add the two arrays 
+                matrixAdd(HEIGHT,WIDTH);
         }
         tstop = dtime();
 
@@ -88,7 +92,7 @@ int main(int argc, char *argv[] )
         {
             printf("Secs Serial = %10.3lf\n",ttime);
         }
-
+	/*
         //threaded part of HW
         long thread;
         pthread_t* thread_handles;
@@ -121,8 +125,8 @@ int main(int argc, char *argv[] )
         }
         if(accum < 0.1) printf("SUCESS\n");
         else printf("FAIL\n");
-
-
+	
+	*/
         return( 0 );
 }
 
