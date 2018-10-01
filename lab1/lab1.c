@@ -27,7 +27,8 @@ int x[HEIGHT][WIDTH];
 int y[HEIGHT][WIDTH];
 
 // declare the output array
-int z[HEIGHT][WIDTH];
+int fc[HEIGHT][WIDTH];
+int fcthread[HEIGHT][WIDTH];
 
 /*global variable accesible to all threads*/
 long threads_count;
@@ -40,7 +41,7 @@ void matrixAdd(int Hight, int Width){
         float Pvalue=0;
         for (row=0; row<Hight; row++){
                 for(col=0; col<Width; col++) {
-                        z[row][col]=x[row][col]+y[row][col];
+                        fc[row][col]=x[row][col]+y[row][col];
                 }
         }
 }
@@ -56,7 +57,7 @@ void* matrixAddTh(void* id){
 	int stop_row=start_row+num_rows_per_thread;
 	for(i=start_row;i<stop_row;i++){
 		for(j=0;j<WIDTH;j++){
-			z[i][j]=x[i][j]+y[i][j];
+			fcthread[i][j]=x[i][j]+y[i][j];
 		}
 	}
         return NULL;
@@ -121,19 +122,19 @@ int main(int argc, char *argv[] )
         {
             printf("Secs Threaded = %10.3lf\n", ttimeT);
         }
-	/*
+	
         //check the solutions are the same in both implementations
         int row, col;
         float dif, accum=0;
-        for (row=0; row<HIGHT; row++){
+        for (row=0; row<HEIGHT; row++){
                 for(col=0; col<WIDTH; col++) {
                         dif=abs(fc[row*WIDTH+col]-fcthread[row*WIDTH+col]);
                         if(dif!=0) accum+=dif;
                 }
         }
-        if(accum < 0.1) printf("SUCESS\n");
+        if(accum < 0.1) printf("SUCCESS\n");
         else printf("FAIL\n");
-	*/
+	printf("%f\n",accum);
 	
         return( 0 );
 }
