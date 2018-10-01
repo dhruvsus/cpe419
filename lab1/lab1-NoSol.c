@@ -1,4 +1,4 @@
-//Name: Dhruv Singal
+
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -26,6 +26,7 @@ double dtime()
 #define ARRAY_SIZE (HIGHT*WIDTH) 
 
 // declare input arrays  
+//TODO
 
 // declare the output array
 //TODO
