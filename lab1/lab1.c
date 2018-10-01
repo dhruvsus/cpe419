@@ -18,8 +18,8 @@ double dtime()
     return( tseconds );
 }
 
-#define HEIGHT 1024
-#define WIDTH 1024
+#define HEIGHT 10
+#define WIDTH 10
 #define ARRAY_SIZE (HEIGHT*WIDTH) 
 
 // declare input arrays  
@@ -76,8 +76,8 @@ int main(int argc, char *argv[] )
         {
             int rloc=i/WIDTH;
 	    int cloc=i%WIDTH;
-	    x[rloc][cloc]=rand();
-	    y[rloc][cloc]=rand();
+	    x[rloc][cloc]=rand()%100;
+	    y[rloc][cloc]=rand()%100;
         }
 
         printf("Starting Compute\r\n");
