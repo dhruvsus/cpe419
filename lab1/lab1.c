@@ -53,8 +53,12 @@ void* matrixAddTh(void* id){
 	int threadID=(int)id;
 	int i,j;
 	int num_rows_per_thread=HEIGHT/threads_count;
+	int leftover_rows=HEIGHT%threads_count;
+	//give the remainder number of rows to the last thread
 	int start_row=threadID*num_rows_per_thread;
 	int stop_row=start_row+num_rows_per_thread;
+	if(threadID==threads_count-1)
+		stop_row=start_row+num_rows_per_thread+leftover_rows;
 	for(i=start_row;i<stop_row;i++){
 		for(j=0;j<WIDTH;j++){
 			fcthread[i][j]=x[i][j]+y[i][j];
@@ -136,6 +140,7 @@ int main(int argc, char *argv[] )
         }
         if(accum < 0.1) printf("SUCCESS\n");
         else printf("FAIL\n");
+	printf("%f",accum);
 	return( 0 );
 }
 
