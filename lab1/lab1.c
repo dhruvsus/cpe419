@@ -18,8 +18,8 @@ double dtime()
     return( tseconds );
 }
 
-#define HEIGHT 900
-#define WIDTH 100
+#define HEIGHT 8192
+#define WIDTH 8192
 #define ARRAY_SIZE (HEIGHT*WIDTH) 
 
 // declare input arrays  
@@ -140,7 +140,7 @@ int main(int argc, char *argv[] )
         }
         if(accum < 0.1) printf("SUCCESS\n");
         else printf("FAIL\n");
-	printf("%f",accum);
+	printf("%f\n",accum);
 	return( 0 );
 }
 
