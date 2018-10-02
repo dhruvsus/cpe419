@@ -19,7 +19,7 @@ double dtime()
 }
 
 #define HEIGHT 900
-#define WIDTH 1000
+#define WIDTH 100
 #define ARRAY_SIZE (HEIGHT*WIDTH) 
 
 // declare input arrays  
