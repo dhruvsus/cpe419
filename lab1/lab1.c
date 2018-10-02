@@ -18,8 +18,8 @@ double dtime()
     return( tseconds );
 }
 
-#define HEIGHT 10
-#define WIDTH 10
+#define HEIGHT 900
+#define WIDTH 1000
 #define ARRAY_SIZE (HEIGHT*WIDTH) 
 
 // declare input arrays  
@@ -128,14 +128,14 @@ int main(int argc, char *argv[] )
         float dif, accum=0;
         for (row=0; row<HEIGHT; row++){
                 for(col=0; col<WIDTH; col++) {
-                        dif=abs(fc[row*WIDTH+col]-fcthread[row*WIDTH+col]);
-                        if(dif!=0) accum+=dif;
+                        //dif=abs(fc[row*WIDTH+col]-fcthread[row*WIDTH+col]);
+                        //editing diff formula to account for 2d array on the stack
+			dif=abs(fc[row][col]-fcthread[row][col]);
+			if(dif!=0) accum+=dif;
                 }
         }
         if(accum < 0.1) printf("SUCCESS\n");
         else printf("FAIL\n");
-	printf("%f\n",accum);
-	
-        return( 0 );
+	return( 0 );
 }
 
