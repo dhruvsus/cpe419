@@ -28,4 +28,23 @@ int B[AB_SHARED][B_WIDTH];
 int C[A_HEIGHT][B_WIDTH];
 long threads_available;
 
-
+int main(int argc, char *argv[]){
+	FILE *fp;
+	int i, j;
+	if(argc!=2)
+		return 0;
+	fp = fopen(argv[2], "r"); // assuming format of command ./a.out <#threads> <name of file>
+	//fill up A
+	for(i=0;i<AB_SHARED;i++){
+		for(j=0;j<A_HEIGHT;j++){
+			fscanf(fp, "%1f", &A[i][j]);
+		}
+	}
+	//fill up B
+	for(i=0;i<B_WIDTH;i++)
+	{
+		for(j=0;j<AB_SHARED;j++){
+			fscanf(fp, "%1f", &B[i][j]);
+		}
+	}	
+}
