@@ -28,11 +28,11 @@ float B[AB_SHARED][B_WIDTH];
 float C[A_HEIGHT][B_WIDTH];
 long threads_available;
 
-void matrix_mult_nonthreaded(int a_height,int b_width,int ab_shared){
+void matrix_mult_nonthreaded(){
 	int i,j,k;
-	for(i=0;i<a_height;i++){
-		for(j=0;j<b_width;j++){
-			for(k=0;k<ab_shared;k++){
+	for(i=0;i<A_HEIGHT;i++){
+		for(j=0;j<B_WIDTH;j++){
+			for(k=0;k<AB_SHARED;k++){
 				C[i][j]+=A[i][k]*B[k][i];
 			}
 		}
@@ -41,6 +41,21 @@ void matrix_mult_nonthreaded(int a_height,int b_width,int ab_shared){
 }
 
 void* matrix_mult_threaded(void* id){
+	int threadID=(int)id;
+	int i,j,k;
+	int num_rows_per_thread=A_HEIGHT/threads_available;
+	int leftover_rows=A_HEIGHT%threads_available;
+	int start_row=threadID*num_rows_per_thread;
+	int stop_row=start_row+num_rows_per_thread;
+	if(threadID==threads_available-1)
+		stop_row=stop_row+leftover_rows;
+	for(i=start_row;i<stop_row;i++){
+		for(j=0;j<B_WIDTH;j++){
+			for(k=0;k<AB_SHARED;k++){
+				C[i][j]+=A[i][k]*B[k][i];
+			}
+		}
+	}
 	return NULL;
 }
 int main(int argc, char *argv[]){
@@ -68,7 +83,7 @@ int main(int argc, char *argv[]){
 	tstart = dtime();
 	//multiply 1000 times
 	for(k=0;k<1000;k++)
-		matrix_mult_nonthreaded(A_HEIGHT,B_WIDTH,AB_SHARED);
+		matrix_mult_nonthreaded();
 	tstop=dtime();
 	ttime = tstop-tstart;
 	//Print results for non threaded
@@ -80,12 +95,13 @@ int main(int argc, char *argv[]){
 	//get number of threads from argv[1]
 	threads_available=strtol(argv[1],NULL, 10);
 	thread_handles=malloc(threads_available*sizeof(pthread_t));
-
 	tstart=dtime();
-	for(thread=0;thread<threads_available;thread++)
-		pthread_create(&thread_handles[thread], NULL, matrix_mult_threaded, (void*) thread);
-	for(thread=0;thread<threads_available;thread++)
-		pthread_join(thread_handles[thread], NULL);
+	for(k=0;k<1000;k++){
+		for(thread=0;thread<threads_available;thread++)
+			pthread_create(&thread_handles[thread], NULL, matrix_mult_threaded, (void*) thread);
+		for(thread=0;thread<threads_available;thread++)
+			pthread_join(thread_handles[thread], NULL);
+	}
 	free(thread_handles);
 	tstop=dtime();
 	ttime=tstop-tstart;
