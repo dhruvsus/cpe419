@@ -39,6 +39,10 @@ void matrix_mult_nonthreaded(int a_height,int b_width,int ab_shared){
 	}
 	return;
 }
+
+void* matrix_mult_threaded(void* id){
+	return NULL;
+}
 int main(int argc, char *argv[]){
 	FILE *fp;
 	int i, j, k;
@@ -69,5 +73,22 @@ int main(int argc, char *argv[]){
 	ttime = tstop-tstart;
 	//Print results for non threaded
 	printf("Secs serial = %10.3lf\n",ttime);
-	return 1;
+	
+	//threaded part of the H/W
+	long thread;
+	pthread_t* thread_handles;
+	//get number of threads from argv[1]
+	threads_available=strtol(argv[1],NULL, 10);
+	thread_handles=malloc(threads_available*sizeof(pthread_t));
+
+	tstart=dtime();
+	for(thread=0;thread<threads_available;thread++)
+		pthread_create(&thread_handles[thread], NULL, matrix_mult_threaded, (void*) thread);
+	for(thread=0;thread<threads_available;thread++)
+		pthread_join(thread_handles[thread], NULL);
+	free(thread_handles);
+	tstop=dtime();
+	ttime=tstop-tstart;
+	printf("Secs threaded = %10.3lf\n", ttime);
+	return 0;
 }
