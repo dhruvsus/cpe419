@@ -18,9 +18,9 @@ double dtime()
 
 //declare constants
 
-#define A_HEIGHT 100
-#define B_WIDTH 90
-#define AB_SHARED 80
+#define A_HEIGHT 900
+#define B_WIDTH 9000
+#define AB_SHARED 100
 
 //declare global variables
 float A[A_HEIGHT][AB_SHARED];
@@ -67,23 +67,22 @@ int main(int argc, char *argv[]){
 	fp = fopen(argv[2], "r");
 	// assuming format of command ./a.out <#threads> <name of file>
 	//fill up A
-	for(i=0;i<AB_SHARED;i++){
-		for(j=0;j<A_HEIGHT;j++){
+	for(i=0;i<A_HEIGHT;i++){
+		for(j=0;j<AB_SHARED;j++){
 			fscanf(fp, "%f", &A[i][j]);
 		}
 	}
 	//fill up B
-	for(i=0;i<B_WIDTH;i++)
+	for(i=0;i<AB_SHARED;i++)
 	{
-		for(j=0;j<AB_SHARED;j++){
+		for(j=0;j<B_WIDTH;j++){
 			fscanf(fp, "%f", &B[i][j]);
 		}
 	}
 	//multiply non threaded
 	tstart = dtime();
 	//multiply 1000 times
-	for(k=0;k<1000;k++)
-		matrix_mult_nonthreaded();
+	matrix_mult_nonthreaded();
 	tstop=dtime();
 	ttime = tstop-tstart;
 	//Print results for non threaded
@@ -96,12 +95,11 @@ int main(int argc, char *argv[]){
 	threads_available=strtol(argv[1],NULL, 10);
 	thread_handles=malloc(threads_available*sizeof(pthread_t));
 	tstart=dtime();
-	for(k=0;k<1000;k++){
-		for(thread=0;thread<threads_available;thread++)
-			pthread_create(&thread_handles[thread], NULL, matrix_mult_threaded, (void*) thread);
-		for(thread=0;thread<threads_available;thread++)
-			pthread_join(thread_handles[thread], NULL);
-	}
+	for(thread=0;thread<threads_available;thread++)
+		pthread_create(&thread_handles[thread], NULL, matrix_mult_threaded, (void*) thread);
+	for(thread=0;thread<threads_available;thread++)
+		pthread_join(thread_handles[thread], NULL);
+	
 	free(thread_handles);
 	tstop=dtime();
 	ttime=tstop-tstart;
