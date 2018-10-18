@@ -63,8 +63,26 @@ int main(void)
 
 	mm<<<4, 1024>>>(A,B,C,N);
 
-	// Wait for GPU to finish before accessing on host
+	int row, col;
+
+        float dif, accum=0;
+       	// Wait for GPU to finish before accessing on host
 	cudaDeviceSynchronize();
+ 
+	for (row=0; row<1000; row++){
+                for(col=0; col<1000; col++) {
+                        dif=abs(C[row*1000+col]-D[row*1000+col]);
+                        //editing diff formula to account for 2d array on the stack
+			//dif=abs(fc[row][col]-fcthread[row][col]);
+			if(dif!=0) accum+=dif;
+                }
+        }
+        if(accum < 10) 
+	std::cout<<"SUCCESS\n";
+        else 
+	std::cout<<"FAIL\n";
+	std::cout<<accum;
+
 
 	// Free memory
 	cudaFree(A);
