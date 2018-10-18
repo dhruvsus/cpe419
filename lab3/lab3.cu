@@ -20,24 +20,23 @@ void matrix_mult_nonthreaded(){
 	for(i=0;i<A_HEIGHT;i++){
 		for(j=0;j<B_WIDTH;j++){
 			for(k=0;k<AB_SHARED;k++){
-				D[i*1000+j]+=A[k*1000+j]*B[i*1000+k];
+				D[i*1000+j]+=A[i*1000+k]*B[k*1000+i];
 			}
 		}
 	}
 	return;
 }
 
-	__global__
-void mm(float* A, float* B, float* C, int N)
+__global__ void mm(float* A, float* B, float* C, int N)
 {
 	int i,j,k;
 	int threadID = blockDim.x*blockIdx.x+threadIdx.x;
 	int gridStride = gridDim.x*blockDim.x;
 
-	for(i=threadID ; i<N; i+=gridStride){
+	for(i=threadID ; i<1000; i+=gridStride){
 		for(j=0;j<B_WIDTH;j++){
 			for(k=0;k<AB_SHARED;k++){
-				C[i*1000+j]+=A[k*1000+j]*B[i*1000+k];
+				C[i*1000+j]+=A[i*1000+k]*B[k*1000+i];
 			}
 		}
 	}
