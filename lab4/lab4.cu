@@ -3,6 +3,7 @@
 #include <math.h>
 #include <cstdlib>
 #include <ctime>
+#include <chrono>
 
 //constants for dimensions of matrices
 #define A_HEIGHT 1000
@@ -61,8 +62,13 @@ int main(void)
 	N = A_HEIGHT*AB_SHARED;
 	D = (float*)malloc(N*sizeof(float));
 	float r;
-	int row, col;
-        float dif=0;
+	int row, col, devideID;
+	float dif=0;
+	//GPU specific variables
+	cudaDeviceProp gpuProps;
+	//get GPU properties
+	cudaGetDevice(&deviceID);
+	cudaGetDeviceProperties(&gpuProps, deviceID);
 
 	//unified:
 	cudaMallocManaged(&A, N*sizeof(float));
@@ -77,13 +83,21 @@ int main(void)
 	}
 	
 	//carry out non threaded matrix mulitiplication. D=AXB	
+	auto tStart=std::chrono::high_resolution_clock::now();
 	matrix_mult_nonthreaded();
+	auto tStop=std::chrono::high_resolution_clock::now();
+	std::chrono::duration<float> tTime=tStop-tStart;
+	std::cout<<tTime.count()<<" seconds\n";
 	
+	tStart=std::chrono::system_clock::now();
 	// Launch kernel on 4*256 threads
 	matrix_mult_threaded<<<4, 1024>>>(A,B,C,N);
 	
 	// Wait for GPU to finish before accessing on host
 	cudaDeviceSynchronize();
+	tStop=std::chrono::system_clock::now();
+	tTime=tStop-tStart;
+	std::cout<<tTime.count()<<" seconds\n";
  
 	//sanity check
 	//make sure results of threaded and non threaded multiplication are the same
