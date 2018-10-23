@@ -18,7 +18,8 @@ __global__ void init_matrix(float *X, float *Y, int N){
 	int threadID=blockDim.x*blockIdx.x+threadIdx.x;
 	int gridStride=gridDim.x*blockDim.x;
 	for(i=threadID;i<N;i+=gridStride){
-		r = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
+		r=1.12f;
+		//r = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
 		X[i] = r;
 		Y[i] = r;
 	}
@@ -54,7 +55,6 @@ int main(void)
 	float* C;
 	int N;
 	N = A_HEIGHT*AB_SHARED;
-	float r;
 	int deviceID;
 	//GPU specific variables
 	cudaDeviceProp gpuProps;
@@ -66,16 +66,13 @@ int main(void)
 	int numSM=gpuProps.multiProcessorCount;
 	int maxThreadsPerBlock=gpuProps.maxThreadsPerBlock;
 	int maxThreadsPerMultiProcessor=gpuProps.maxThreadsPerMultiProcessor;
-	
+	int maxGridSize=gpuProps.maxGridSize[0];
+	int maxThreadsDim=gpuProps.maxThreadsDim[0];	
 	//unified:
 	cudaMallocManaged(&A, N*sizeof(float));
 	cudaMallocManaged(&B, N*sizeof(float));
 	cudaMallocManaged(&C, N*sizeof(float));
 	
-	curandCreateGenerator(CURAND_RNG_PSEUDO_MTGP32);
-	curandSetPseudoRandomGeneratorSeed();
-	curandState *d_state;
-	curdaMalloc(&d, sizerof(curandState);
 	//initialize A and B on the GPU
 	init_matrix<<<2*numSM, 128>>>(A,B,N);
 
@@ -88,12 +85,32 @@ int main(void)
 	cudaMemPrefetchAsync(&B, N*sizeof(float), deviceID);
 	cudaMemPrefetchAsync(&C, N*sizeof(float), deviceID);
 
-	std::cout<<"SM's "<<numSM<<", maxThreadsPerBlock "<<maxThreadsPerBlock<<", maxThreadsPerMultiProcessor "<<maxThreadsPerMultiProcessor;
+	std::cout<<"SM's "<<numSM<<", maxThreadsPerBlock "<<maxThreadsPerBlock<<", maxThreadsPerMultiProcessor "<<maxThreadsPerMultiProcessor<<" maxGridSize "<<maxGridSize<<" maxThreadsDim "<<maxThreadsDim;
 	// Launch kernel
 	matrix_mult_threaded<<<2*numSM, 128>>>(A,B,C,N);
 	
 	// Wait for GPU to finish before accessing on host
 	cudaDeviceSynchronize();
+	
+	// Launch kernel
+	matrix_mult_threaded<<<2*numSM, 256>>>(A,B,C,N);
+	
+	// Wait for GPU to finish before accessing on host
+	cudaDeviceSynchronize();
+	
+	// Launch kernel
+	matrix_mult_threaded<<<4*numSM, 128>>>(A,B,C,N);
+	
+	// Wait for GPU to finish before accessing on host
+	cudaDeviceSynchronize();
+	
+	// Launch kernel
+	matrix_mult_threaded<<<4*numSM, 256>>>(A,B,C,N);
+	
+	// Wait for GPU to finish before accessing on host
+	cudaDeviceSynchronize();
+	
+	
 	
 	//fetch C to CPU
 	cudaMemPrefetchAsync(&C, N*sizeof(float), cudaCpuDeviceId);

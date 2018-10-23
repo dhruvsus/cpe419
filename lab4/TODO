@@ -1,0 +1,4 @@
+1. matrix multiplication in 2d using dim3?
+2. curand for random numbers on the GPU
+3. init on the GPU
+4. divide and conquer algorithm for matrix multiplication
