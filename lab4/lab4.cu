@@ -9,11 +9,10 @@
 #define B_WIDTH 1000
 #define AB_SHARED 1000
 
-//declare global variables
-float* A;
-float* B;
-float* C;
-int N;
+//init matrix
+__global__ void init_matrix(float *X, int N){
+	
+}
 
 //threaded across cuda enabled GPU for matrix multiplication
 __global__ void matrix_mult_threaded(float* A, float* B, float* C, int N)
@@ -40,6 +39,10 @@ int main(void)
 {	
 	//memory allocation
 	//host:
+	float* A;
+	float* B;
+	float* C;
+	int N;
 	N = A_HEIGHT*AB_SHARED;
 	float r;
 	int deviceID;
