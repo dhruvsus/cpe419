@@ -45,14 +45,23 @@ __global__ void matrixMult(float* A, float* B, float* C, int N)
 		}
 	}
 }
-//TODO: add
+
+//threaded across cuda enabled GPU for matrix addition
 __global__ void matrixAdd(float* A, float* B, float* C, int N)
+{	
 	int i, j;
 	int xLoc=blockDim.x*blockIdx.x+threadIdx.x;
 	int yLoc=blockDim.y*blockIdx.y+threadIdx.y;
-	for(i=xLoc;i<N;i++){
-		
+	int gridStrideX=blockDim.x*gridDim.x;
+	int gridStrideY=blockDim.y*gridDim.y;
+
+	for(i=xLoc;i<N;i+=gridStrideX){
+		for(j=yLoc;j<N;j+=gridStrideY){
+			C[i][j]=A[i][j]+B[i][j];
+		}
 	}
+}
+
 int main(void)
 {	
 	//memory allocation
@@ -95,31 +104,11 @@ int main(void)
 
 	std::cout<<"SM's "<<numSM<<", maxThreadsPerBlock "<<maxThreadsPerBlock<<", maxThreadsPerMultiProcessor "<<maxThreadsPerMultiProcessor<<" maxGridSize "<<maxGridSize<<" maxThreadsDim "<<maxThreadsDim;
 	// Launch kernel
-	matrix_mult_threaded<<<2*numSM, 128>>>(A,B,C,N);
+	matrixAdd<<<2*numSM, 128>>>(A,B,C,N);
 	
 	// Wait for GPU to finish before accessing on host
 	cudaDeviceSynchronize();
-	
-	// Launch kernel
-	matrix_mult_threaded<<<2*numSM, 256>>>(A,B,C,N);
-	
-	// Wait for GPU to finish before accessing on host
-	cudaDeviceSynchronize();
-	
-	// Launch kernel
-	matrix_mult_threaded<<<4*numSM, 128>>>(A,B,C,N);
-	
-	// Wait for GPU to finish before accessing on host
-	cudaDeviceSynchronize();
-	
-	// Launch kernel
-	matrix_mult_threaded<<<4*numSM, 256>>>(A,B,C,N);
-	
-	// Wait for GPU to finish before accessing on host
-	cudaDeviceSynchronize();
-	
-	
-	
+
 	//fetch C to CPU
 	cudaMemPrefetchAsync(&C, N*sizeof(float), cudaCpuDeviceId);
 
