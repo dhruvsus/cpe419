@@ -7,8 +7,10 @@
 #include <curand_kernel.h>
 
 //constants for dimensions of matrices
-#define A_height 1000
-#define A_width 1000
+#define A_HEIGHT 1000
+#define A_WIDTH 1000
+#define THREADSIZE 16
+
 
 //init matrix: initialize A and B with value from 0.0 to 1.0
 __global__ void init_matrix(float *X, float *Y, int N){
@@ -70,9 +72,10 @@ int main(void)
 	float* C;
 	int nX;
 	int nY;
-	nX=A_width;
-	nY=A_height;
+	nX=A_WIDTH;
+	nY=A_HEIGHT;
 	int deviceID;
+	
 	//GPU specific variables
 	cudaDeviceProp gpuProps;
 	
@@ -85,9 +88,9 @@ int main(void)
 	int maxThreadsPerMultiProcessor=gpuProps.maxThreadsPerMultiProcessor;
 	int maxGridSize=gpuProps.maxGridSize[0];
 	int maxThreadsDim=gpuProps.maxThreadsDim[0];	
-	
-	dim3 blocks(4*numSM);
-	dim3 threads(32,32);
+
+	const dim3 blockSize(THREADSIZE, THREADSIZE, 1);
+	const dim3 gridSize(((A_WIDTH-1)/THREADSIZE)+1,((A_HEIGHT-1)/THREADSIZE)+1);
 	
 	//unified: on maxwell, this get allocated on the GPU
 	cudaMallocManaged(&A, nX*nY*sizeof(float));
@@ -110,7 +113,7 @@ int main(void)
 	
 	std::cout<<"SM's "<<numSM<<", maxThreadsPerBlock "<<maxThreadsPerBlock<<", maxThreadsPerMultiProcessor "<<maxThreadsPerMultiProcessor<<" maxGridSize "<<maxGridSize<<" maxThreadsDim "<<maxThreadsDim;
 	// Launch kernel
-	matrixAdd<<<blocks, threads>>>(A,B,C,nX,nY);
+	matrixAdd<<<gridSize, blockSize>>>(A,B,C,nX,nY);
 	
 	// Wait for GPU to finish before accessing on host
 	cudaDeviceSynchronize();
