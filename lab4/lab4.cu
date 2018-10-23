@@ -26,7 +26,7 @@ __global__ void init_matrix(float *X, float *Y, int N){
 }
 
 //threaded across cuda enabled GPU for matrix multiplication
-__global__ void matrix_mult_threaded(float* A, float* B, float* C, int N)
+__global__ void matrixMult(float* A, float* B, float* C, int N)
 {
 	int i,j,k;
 	int threadID = blockDim.x*blockIdx.x+threadIdx.x;
@@ -45,7 +45,14 @@ __global__ void matrix_mult_threaded(float* A, float* B, float* C, int N)
 		}
 	}
 }
-
+//TODO: add
+__global__ void matrixAdd(float* A, float* B, float* C, int N)
+	int i, j;
+	int xLoc=blockDim.x*blockIdx.x+threadIdx.x;
+	int yLoc=blockDim.y*blockIdx.y+threadIdx.y;
+	for(i=xLoc;i<N;i++){
+		
+	}
 int main(void)
 {	
 	//memory allocation
@@ -68,7 +75,8 @@ int main(void)
 	int maxThreadsPerMultiProcessor=gpuProps.maxThreadsPerMultiProcessor;
 	int maxGridSize=gpuProps.maxGridSize[0];
 	int maxThreadsDim=gpuProps.maxThreadsDim[0];	
-	//unified:
+	
+	//unified: on maxwell, this get allocated on the GPU
 	cudaMallocManaged(&A, N*sizeof(float));
 	cudaMallocManaged(&B, N*sizeof(float));
 	cudaMallocManaged(&C, N*sizeof(float));
