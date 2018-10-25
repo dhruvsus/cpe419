@@ -25,6 +25,17 @@ __global__ void init_matrix(float *X, float *Y, int N){
 		Y[i] = r;
 	}
 }
+
+//matrix addition, non threaded
+void matrixAddNonThreaded(float* A, float* B, float* D, int nX, int nY){
+        int row, col;
+        for (row=0; row<nY; row++){
+                for(col=0; col<nX; col++) {
+                        D[row*nX+col]=A[row*nX+col]+B[row*nX+col];
+                }
+        }
+}
+
 /*
 //threaded across cuda enabled GPU for matrix multiplication
 __global__ void matrixMult(float* A, float* B, float* C, int N)
@@ -48,7 +59,7 @@ __global__ void matrixMult(float* A, float* B, float* C, int N)
 }
 */
 //threaded across cuda enabled GPU for matrix addition
-__global__ void matrixAdd(float* A, float* B, float* C, int nX, int nY)
+__global__ void matrixAddGPU(float* A, float* B, float* C, int nX, int nY)
 {	
 	int i, j;
 	int xLoc=blockDim.x*blockIdx.x+threadIdx.x;
@@ -66,16 +77,17 @@ __global__ void matrixAdd(float* A, float* B, float* C, int nX, int nY)
 int main(void)
 {	
 	//memory allocation
-	//host:
 	float* A;
 	float* B;
 	float* C;
+	float* D;
 	int nX;
 	int nY;
 	nX=A_WIDTH;
 	nY=A_HEIGHT;
 	int deviceID;
-	
+	int N=nX*nY;
+
 	//GPU specific variables
 	cudaDeviceProp gpuProps;
 	
@@ -96,7 +108,13 @@ int main(void)
 	cudaMallocManaged(&A, nX*nY*sizeof(float));
 	cudaMallocManaged(&B, nX*nY*sizeof(float));
 	cudaMallocManaged(&C, nX*nY*sizeof(float));
-	
+	D = (float*)malloc(N*sizeof(float));
+
+	//current memory status, assuming <Pascal
+	//A,B,C allocated on the device
+	//nX, nY, deviceID allocated on the host
+	//D allocated on the host, as we don't need it on the device.
+
 	//initialize A and B on the GPU
 	init_matrix<<<2*numSM, 128>>>(A,B,nX*nY);
 	
@@ -111,9 +129,9 @@ int main(void)
 	cudaMemPrefetchAsync(&C, N*sizeof(float), deviceID);
 	*/
 	
-	std::cout<<"SM's "<<numSM<<", maxThreadsPerBlock "<<maxThreadsPerBlock<<", maxThreadsPerMultiProcessor "<<maxThreadsPerMultiProcessor<<" maxGridSize "<<maxGridSize<<" maxThreadsDim "<<maxThreadsDim;
+	std::cout<<"SM's "<<numSM<<", maxThreadsPerBlock "<<maxThreadsPerBlock<<", maxThreadsPerMultiProcessor "<<maxThreadsPerMultiProcessor<<" maxGridSize "<<maxGridSize<<" maxThreadsDim "<<maxThreadsDim<<'\n';
 	// Launch kernel
-	matrixAdd<<<gridSize, blockSize>>>(A,B,C,nX,nY);
+	matrixAddGPU<<<gridSize, blockSize>>>(A,B,C,nX,nY);
 	
 	// Wait for GPU to finish before accessing on host
 	cudaDeviceSynchronize();
@@ -125,6 +143,6 @@ int main(void)
 	cudaFree(A);
 	cudaFree(B);
 	cudaFree(C);
-	
+	free(D);
 	return 0;
 }
