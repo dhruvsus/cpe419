@@ -11,16 +11,17 @@
 //constants for dimensions of matrices
 #define A_HEIGHT 8192
 #define A_WIDTH 8192
-#define THREADSIZE 16
-#define THREADSPERBLOCK 128
+#define THREADSIZEX 32
+#define THREADSIZEY 32
+#define THREADSPERBLOCK 256
 
 //init matrix: initialize A and B with value from 0.0 to 1.0
 __global__ void initMatrixGPU(float *X, float *Y, int N, curandState *state){
 	int i, seed=1337;
 	int threadID=blockDim.x*blockIdx.x+threadIdx.x;
 	int gridStride=gridDim.x*blockDim.x;
-	curand_init(seed, threadID, 0, &state[threadID]);
-	float RANDOM = curand_uniform(&state[threadID]);
+	curand_init(seed, threadID, 0, &state[threadIdx.x]);
+	float RANDOM = curand_uniform(&state[threadIdx.x]);
 	for(i=threadID;i<N;i+=gridStride){
 		X[i] = RANDOM;
 		Y[i] = RANDOM;
@@ -80,8 +81,8 @@ int main(void)
 	int maxGridSize=gpuProps.maxGridSize[0];
 	int maxThreadsDim=gpuProps.maxThreadsDim[0];	
 
-	const dim3 blockSize(THREADSIZE, THREADSIZE, 1);
-	const dim3 gridSize(((A_WIDTH-1)/THREADSIZE)+1,((A_HEIGHT-1)/THREADSIZE)+1);
+	const dim3 blockSize(THREADSIZEX, THREADSIZEY, 1);
+	const dim3 gridSize(((A_WIDTH-1)/THREADSIZEX)+1,((A_HEIGHT-1)/THREADSIZEY)+1);
 
 	// Allocate memory on unified heap and host memory
 	cudaMallocManaged(&A, nX*nY*sizeof(float));
@@ -89,7 +90,7 @@ int main(void)
 	cudaMemAdvise(&A, N*sizeof(float), cudaMemAdviseSetReadMostly, deviceID);
 	cudaMemAdvise(&B, N*sizeof(float), cudaMemAdviseSetReadMostly, deviceID);
 	cudaMallocManaged(&C, nX*nY*sizeof(float));
-	cudaMalloc(&state, N*sizeof(curandState));
+	cudaMalloc(&state, THREADSIZEX*sizeof(curandState));
 
 	D = (float*)malloc(N*sizeof(float));
 
