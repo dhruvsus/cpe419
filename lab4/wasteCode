@@ -1,0 +1,23 @@
+/*
+//threaded across cuda enabled GPU for matrix multiplication
+__global__ void matrixMult(float* A, float* B, float* C, int N)
+{
+        int i,j,k;
+        int threadID = blockDim.x*blockIdx.x+threadIdx.x;
+        int gridStride = gridDim.x*blockDim.x;
+        //each thread does work[thread] and work[thread+gridStride]
+        //until thread+GridStride<N because N >> #threads, so each
+        //thread does more work
+        //rows of M1
+        for(i=threadID ; i<A_HEIGHT; i+=gridStride){
+                //columsn of M2
+                for(j=0;j<B_WIDTH;j++){
+                        //columns of M1 = rows of M2
+                        for(k=0;k<AB_SHARED;k++){
+                                C[i*AB_SHARED+j]+=A[i*AB_SHARED+k]*B[k*AB_SHARED+i];
+                        }
+                }
+        }
+}
+*/
+

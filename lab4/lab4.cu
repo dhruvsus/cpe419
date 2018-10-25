@@ -5,6 +5,8 @@
 #include <ctime>
 #include <curand.h>
 #include <curand_kernel.h>
+#include <stdio.h>
+#include <math.h>
 
 //constants for dimensions of matrices
 #define A_HEIGHT 1000
@@ -13,7 +15,7 @@
 
 
 //init matrix: initialize A and B with value from 0.0 to 1.0
-__global__ void init_matrix(float *X, float *Y, int N){
+__global__ void initMatrixGPU(float *X, float *Y, int N){
 	int i;
 	float r;
 	int threadID=blockDim.x*blockIdx.x+threadIdx.x;
@@ -28,36 +30,14 @@ __global__ void init_matrix(float *X, float *Y, int N){
 
 //matrix addition, non threaded
 void matrixAddNonThreaded(float* A, float* B, float* D, int nX, int nY){
-        int row, col;
-        for (row=0; row<nY; row++){
-                for(col=0; col<nX; col++) {
-                        D[row*nX+col]=A[row*nX+col]+B[row*nX+col];
-                }
-        }
-}
-
-/*
-//threaded across cuda enabled GPU for matrix multiplication
-__global__ void matrixMult(float* A, float* B, float* C, int N)
-{
-	int i,j,k;
-	int threadID = blockDim.x*blockIdx.x+threadIdx.x;
-	int gridStride = gridDim.x*blockDim.x;
-	//each thread does work[thread] and work[thread+gridStride]
-	//until thread+GridStride<N because N >> #threads, so each
-	//thread does more work
-	//rows of M1
-	for(i=threadID ; i<A_HEIGHT; i+=gridStride){
-		//columsn of M2
-		for(j=0;j<B_WIDTH;j++){
-			//columns of M1 = rows of M2
-			for(k=0;k<AB_SHARED;k++){
-				C[i*AB_SHARED+j]+=A[i*AB_SHARED+k]*B[k*AB_SHARED+i];
-			}
+	int row, col;
+	for (row=0; row<nY; row++){
+		for(col=0; col<nX; col++) {
+			D[row*nX+col]=A[row*nX+col]+B[row*nX+col];
 		}
 	}
 }
-*/
+
 //threaded across cuda enabled GPU for matrix addition
 __global__ void matrixAddGPU(float* A, float* B, float* C, int nX, int nY)
 {	
@@ -88,13 +68,12 @@ int main(void)
 	int deviceID;
 	int N=nX*nY;
 
-	//GPU specific variables
+	// GPU specific variables
 	cudaDeviceProp gpuProps;
-	
-	//get GPU properties
+
+	// Get GPU properties
 	cudaGetDevice(&deviceID);
 	cudaGetDeviceProperties(&gpuProps, deviceID);
-
 	int numSM=gpuProps.multiProcessorCount;
 	int maxThreadsPerBlock=gpuProps.maxThreadsPerBlock;
 	int maxThreadsPerMultiProcessor=gpuProps.maxThreadsPerMultiProcessor;
@@ -103,42 +82,42 @@ int main(void)
 
 	const dim3 blockSize(THREADSIZE, THREADSIZE, 1);
 	const dim3 gridSize(((A_WIDTH-1)/THREADSIZE)+1,((A_HEIGHT-1)/THREADSIZE)+1);
-	
-	//unified: on maxwell, this get allocated on the GPU
+
+	// Allocate memory on unified heap and host memory
 	cudaMallocManaged(&A, nX*nY*sizeof(float));
 	cudaMallocManaged(&B, nX*nY*sizeof(float));
 	cudaMallocManaged(&C, nX*nY*sizeof(float));
 	D = (float*)malloc(N*sizeof(float));
 
-	//current memory status, assuming <Pascal
+	//current memory status, assuming >Pascal
 	//A,B,C allocated on the device
 	//nX, nY, deviceID allocated on the host
 	//D allocated on the host, as we don't need it on the device.
 
-	//initialize A and B on the GPU
-	init_matrix<<<2*numSM, 128>>>(A,B,nX*nY);
-	
-	/*
-	//prefetch A and B to CPU
-	cudaMemPrefetchAsync(&A, N*sizeof(float), cudaCpuDeviceId);
-	cudaMemPrefetchAsync(&B, N*sizeof(float), cudaCpuDeviceId);
-
-	//prefetch A, B, and C to GPU
-	cudaMemPrefetchAsync(&A, N*sizeof(float), deviceID);
-	cudaMemPrefetchAsync(&B, N*sizeof(float), deviceID);
-	cudaMemPrefetchAsync(&C, N*sizeof(float), deviceID);
-	*/
-	
-	std::cout<<"SM's "<<numSM<<", maxThreadsPerBlock "<<maxThreadsPerBlock<<", maxThreadsPerMultiProcessor "<<maxThreadsPerMultiProcessor<<" maxGridSize "<<maxGridSize<<" maxThreadsDim "<<maxThreadsDim<<'\n';
-	// Launch kernel
-	matrixAddGPU<<<gridSize, blockSize>>>(A,B,C,nX,nY);
-	
-	// Wait for GPU to finish before accessing on host
+	// Launch init kernel
+	initMatrixGPU<<<2*numSM, 128>>>(A,B,nX*nY);
 	cudaDeviceSynchronize();
 
-	//fetch C to CPU
-	//cudaMemPrefetchAsync(&C, N*sizeof(float), cudaCpuDeviceId);
+	// Print GPU info
+	std::cout<<"SM's "<<numSM<<", maxThreadsPerBlock "<<maxThreadsPerBlock<<", maxThreadsPerMultiProcessor "<<maxThreadsPerMultiProcessor<<" maxGridSize "<<maxGridSize<<" maxThreadsDim "<<maxThreadsDim<<'\n';
+	// Launch add kernel
+	matrixAddGPU<<<gridSize, blockSize>>>(A,B,C,nX,nY);
+	cudaDeviceSynchronize();
 
+	// Sequential matrix addition
+	matrixAddNonThreaded(A,B,D,nX,nY);
+
+	//sanity check
+	int row, col;
+	float dif=0;
+	for (row=0; row<nY; row++){
+		for(col=0; col<nX; col++)
+			dif+=abs(C[row*nX+col]-D[row*nX+col]);
+	}
+	if(dif < 10) printf("SUCCESS\n");
+	else printf("FAIL\n");
+	printf("%f\n",dif);
+	
 	// Free memory
 	cudaFree(A);
 	cudaFree(B);
