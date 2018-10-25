@@ -9,22 +9,21 @@
 #include <math.h>
 
 //constants for dimensions of matrices
-#define A_HEIGHT 1000
-#define A_WIDTH 1000
+#define A_HEIGHT 8192
+#define A_WIDTH 8192
 #define THREADSIZE 16
-
+#define THREADSPERBLOCK 128
 
 //init matrix: initialize A and B with value from 0.0 to 1.0
-__global__ void initMatrixGPU(float *X, float *Y, int N){
-	int i;
-	float r;
+__global__ void initMatrixGPU(float *X, float *Y, int N, curandState *state){
+	int i, seed=1337;
 	int threadID=blockDim.x*blockIdx.x+threadIdx.x;
 	int gridStride=gridDim.x*blockDim.x;
+	curand_init(seed, threadID, 0, &state[threadID]);
+	float RANDOM = curand_uniform(&state[threadID]);
 	for(i=threadID;i<N;i+=gridStride){
-		r=1.12f;
-		//r = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
-		X[i] = r;
-		Y[i] = r;
+		X[i] = RANDOM;
+		Y[i] = RANDOM;
 	}
 }
 
@@ -67,6 +66,7 @@ int main(void)
 	nY=A_HEIGHT;
 	int deviceID;
 	int N=nX*nY;
+	curandState* state;
 
 	// GPU specific variables
 	cudaDeviceProp gpuProps;
@@ -86,16 +86,24 @@ int main(void)
 	// Allocate memory on unified heap and host memory
 	cudaMallocManaged(&A, nX*nY*sizeof(float));
 	cudaMallocManaged(&B, nX*nY*sizeof(float));
+	cudaMemAdvise(&A, N*sizeof(float), cudaMemAdviseSetReadMostly, deviceID);
+	cudaMemAdvise(&B, N*sizeof(float), cudaMemAdviseSetReadMostly, deviceID);
 	cudaMallocManaged(&C, nX*nY*sizeof(float));
+	cudaMalloc(&state, N*sizeof(curandState));
+
 	D = (float*)malloc(N*sizeof(float));
 
 	//current memory status, assuming >Pascal
 	//A,B,C allocated on the device
 	//nX, nY, deviceID allocated on the host
 	//D allocated on the host, as we don't need it on the device.
+	//Prefetch A, B, and C onto device
+	cudaMemPrefetchAsync(&A, N*sizeof(float), deviceID);
+	cudaMemPrefetchAsync(&B, N*sizeof(float), deviceID);
+	cudaMemPrefetchAsync(&C, N*sizeof(float), deviceID);
 
 	// Launch init kernel
-	initMatrixGPU<<<2*numSM, 128>>>(A,B,nX*nY);
+	initMatrixGPU<<<2*numSM, THREADSPERBLOCK>>>(A,B,nX*nY,state);
 	cudaDeviceSynchronize();
 
 	// Print GPU info
@@ -103,6 +111,11 @@ int main(void)
 	// Launch add kernel
 	matrixAddGPU<<<gridSize, blockSize>>>(A,B,C,nX,nY);
 	cudaDeviceSynchronize();
+	
+	// Prefetch A,B to host
+	cudaMemPrefetchAsync(&A, N*sizeof(float), cudaCpuDeviceId);
+	cudaMemPrefetchAsync(&B, N*sizeof(float), cudaCpuDeviceId);
+	cudaMemPrefetchAsync(&C, N*sizeof(float), cudaCpuDeviceId);
 
 	// Sequential matrix addition
 	matrixAddNonThreaded(A,B,D,nX,nY);
@@ -114,7 +127,7 @@ int main(void)
 		for(col=0; col<nX; col++)
 			dif+=abs(C[row*nX+col]-D[row*nX+col]);
 	}
-	if(dif < 10) printf("SUCCESS\n");
+	if(dif < 0.1) printf("SUCCESS\n");
 	else printf("FAIL\n");
 	printf("%f\n",dif);
 	
