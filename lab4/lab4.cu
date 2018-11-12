@@ -7,6 +7,7 @@
 #include <curand_kernel.h>
 #include <stdio.h>
 #include <math.h>
+#include <cuda.h>
 
 //constants for dimensions of matrices
 #define A_HEIGHT 8192
