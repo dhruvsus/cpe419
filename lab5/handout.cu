@@ -1,19 +1,23 @@
 //imports
-#include <iostream>
-#include <cstdlib>
-#include <ctime>
 #include <stdio.h>
 #include <math.h>
 #include <cuda.h>
+#include <stdlib.h>
 
-__global__
-void printSome(int x){
-    printf("%d", x);
+__global__ void printSome(int i){
+	printf("%d",i);
 }
 int main(){
-    int i;
-    for(i=0;i<50;i++){
-        printSome<<<1,1>>>(i);
-    }
-    return 0;
+	cudaStream_t streams[5];
+	int i;
+	for(i=0;i<5;i++){
+		cudaStreamCreate(&streams[i]);
+	}
+	for(i=0;i<5;i++){
+		printSome<<<1,1,0,streams[i]>>>(i);
+	}
+	for(i=0;i<5;i++){
+		cudaStreamDestroy(streams[i]);
+	}
+	return 0;
 }
