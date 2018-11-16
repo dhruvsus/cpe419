@@ -7,7 +7,7 @@
 //constants
 #define HEIGHT 3000
 #define WIDTH 3000
-#define NUM_STREAMS 10
+#define NUM_STREAMS 2
 #define NUM_BLOCKS 32
 #define THREADS_PER_BLOCK 128
 #define CACHEAMT 0
@@ -16,21 +16,18 @@ __global__ void addMat(int *d_X, int *d_Y, int * d_Z, int numElements) {
 	int myThreadID = (blockIdx.x * blockDim.x) + threadIdx.x;
 	int gridStride = blockDim.x*gridDim.x;
 	int i;
-	for (i=0;myThreadID<numElements;i+=gridStride) {
+	for (i=myThreadID;i<numElements;i+=gridStride) {
 		// do the add into d_Z.
-		d_Z[myThreadID] = d_X[myThreadID] + d_Y[myThreadID];
+		d_Z[i] = d_X[i] + d_Y[i];
 	}
 }
 
-void matrixAddNonThreaded(int *A, int *B, int *D, int nX, int nY){
-	int row, col;
-	for (row=0; row<nY; row++){
-		for(col=0; col<nX; col++) {
-			D[row*nX+col]=A[row*nX+col]+B[row*nX+col];
-		}
+void matrixAddNonThreaded(int *X, int *Y, int *D, int nX, int nY){
+	int i;
+	for (i=0;i<nX*nY;i++){
+		D[i]=X[i]+Y[i];
 	}
 }
-
 int main() {
 	int i, *X, *Y, *Z, *D, *d_X, *d_Y, *d_Z, offset, streamSize;
 	//clean GPU
@@ -50,7 +47,7 @@ int main() {
 
 	//initialize X and Y
 	srand(time(NULL));
-	int r=rand()%100;
+	int r=0;
 	for (int i = 0; i < HEIGHT*WIDTH; i++) {
 		X[i] = r;
 		Y[i] = r;
@@ -64,19 +61,12 @@ int main() {
 	//allocate matrix d_Z on the device
 	cudaMalloc(&d_Z, HEIGHT * WIDTH * sizeof(int));
 
-	// for each stream, copy and add
-	// copy first part of X and Y
-	// this is sequential because on the default stream
-	// maybe use 2 streams, async and synchronize the streams
+	//streamSize: number of words for each stream to work on
 	streamSize = (HEIGHT * WIDTH) / NUM_STREAMS;
 	offset = 0;
-	// hopefully NUM_STREAMS>=2
-	//cudaMemcpyAsync(&d_X[offset], &X[offset], streamSize, cudaMemcpyHostToDevice, streams[0]);
-	//cudaMemcpyAsync(&d_Y[offset], &Y[offset], streamSize, cudaMemcpyHostToDevice, streams[1]);
-	//cudaStreamSynchronize(streams[0]);
-	//cudaStreamSynchronize(streams[1]);
+	
 	for(i=0;i<NUM_STREAMS;i++){
-		//copy memory
+		//copy memory. this is synchronous because same stream
 		cudaMemcpyAsync(&d_X[offset], &X[offset], streamSize*sizeof(int), cudaMemcpyHostToDevice, streams[i]);
 		cudaMemcpyAsync(&d_Y[offset], &Y[offset], streamSize*sizeof(int), cudaMemcpyHostToDevice, streams[i]);
 		addMat<<<NUM_BLOCKS, THREADS_PER_BLOCK, CACHEAMT, streams[i]>>>(&d_X[offset], &d_Y[offset], &d_Z[offset], streamSize);
@@ -85,6 +75,7 @@ int main() {
 	
 	//synchronize
 	cudaDeviceSynchronize();
+
 	for (i = 0; i < NUM_STREAMS; i++){
 		cudaStreamDestroy( streams[i]);
 	}
@@ -95,16 +86,14 @@ int main() {
 	//host only matrix addition
 	matrixAddNonThreaded(X,Y,D,WIDTH,HEIGHT);
 
-	int row, col;
-	float dif=0;
-	for (row=0; row<HEIGHT; row++){
-		for(col=0; col<WIDTH; col++)
-			dif+=abs(Z[row*WIDTH+col]-D[row*WIDTH+col]);
+	int dif=0;
+	for (i=0; i<HEIGHT*WIDTH; i++){
+		dif+=abs(Z[i]-D[i]);
 	}
 	if(dif < 1) printf("SUCCESS\n");
 	else printf("FAIL\n");
-	printf("%f\n",dif);
-
+	printf("%d\n",dif);
+	
 	cudaFree(d_X);
 	cudaFree(d_Y);
 	cudaFree(d_Z);
