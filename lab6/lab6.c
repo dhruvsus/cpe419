@@ -17,9 +17,9 @@ double dtime()
 }
 
 // CUDA kernel to multiply elements of two arrays
-#define A_HEIGHT 1000
-#define B_WIDTH 1000
-#define AB_SHARED 1000
+#define A_HEIGHT 1024
+#define B_WIDTH 512
+#define AB_SHARED 1024
 #define THREADS_AVAILABLE 4
 
 //declare global variables
@@ -39,7 +39,7 @@ void mm_cpu_serial()
 		{
 			for (k = 0; k < AB_SHARED; k++)
 			{
-				C[i * 1000 + j] += A[i * 1000 + k] * B[k * 1000 + i];
+				C[i * AB_SHARED + j] += A[i * AB_SHARED + k] * B[k * B_WIDTH + i];
 			}
 		}
 	}
@@ -62,7 +62,7 @@ void *mm_cpu_parallel(void *id)
 		{
 			for (k = 0; k < AB_SHARED; k++)
 			{
-				C[i * 1000 + j] += A[i * 1000 + k] * B[k * 1000 + i];
+				C[i * AB_SHARED + j] += A[i * AB_SHARED + k] * B[k * B_WIDTH + i];
 			}
 		}
 	}
