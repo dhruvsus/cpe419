@@ -30,6 +30,7 @@ long threads_available;
 
 void matrix_mult_nonthreaded(){
 	int i,j,k;
+	#pragma omp parallel for collapse(3) private(i,j,k) schedule(static, 2)
 	for(i=0;i<A_HEIGHT;i++){
 		for(j=0;j<B_WIDTH;j++){
 			for(k=0;k<AB_SHARED;k++){

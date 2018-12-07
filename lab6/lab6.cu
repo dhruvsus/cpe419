@@ -101,7 +101,8 @@ int main(void)
 	//multiply gpu non shared
 	tstart=dtime();
 	
-	//launch kernel on 
+	//launch kernel on 32 blocks and 256 threads per block
+	mm_gpu
 	tstop=dtime();
 	//multiply cpu serial
 	tstart = dtime();
